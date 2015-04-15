@@ -1,0 +1,26 @@
+{
+  "name": "CryptoProAPI",
+  "version": "0.0.1",
+  "description": "Простое API для работы с КриптоПро ЭЦП Browser plug-in",
+  "repository": {
+        "type": "git",
+        "url": "https://github.com/shanhaichik/CryptoProAPI.git"
+  },
+  "author": {
+        "name": "Alexander Dukhovnyak",
+        "email": "shanhaichik@gmail.com"
+  },
+  "license": "MIT",
+  "main": "src/cryptoAPI.js",
+  "scripts": {
+    "watch": "watchify ./dev/CryptoPro.js -o dev/bundle.js -v -d",
+    "browserify": "browserify ./dev/CryptoPro.js | uglifyjs  -m > src/cryptoAPI.js",
+    "build": "npm run browserify ",
+    "start": "npm run watch"
+  },
+  "devDependencies": {
+    "browserify": "~6.0.3",
+    "uglify-js": "~2.4.15",
+    "watchify": "~2.0.0"
+  }
+}
