@@ -222,7 +222,7 @@ var CryptoMessage = require('./CryptoMessage');
         },
 
         /*
-         * Получение объекта сертификата
+         * Получение OID сертификата
          *
          * @method getExtendedKeyUsage
          * @returns {Array} Возвращает массив OID (улучшенного ключа)
@@ -350,7 +350,6 @@ var CryptoMessage = require('./CryptoMessage');
                 OID: this.cetificate.PublicKey().Algorithm.Value
             }
         }
-
     };
 
     /*
@@ -501,7 +500,7 @@ var CryptoMessage = require('./CryptoMessage');
      *
      * @method getHash
      * @param {String} str строка для вычисления hash значения
-     * @param {Boolean} binary Тип подписи
+     * @param {Boolean} binary вычисления хеш бинарных данных
      * @returns {String} Возвращает hash строку
      */
     crypto.getHash = function (str, binary) {
