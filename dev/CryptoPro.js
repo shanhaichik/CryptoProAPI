@@ -151,7 +151,7 @@ var CryptoMessage = require('./CryptoMessage');
          * Проверка на массив
          *
          * @method isArray
-         * @param {Array} Массив
+         * @param {Array} x Массив
          * @returns {Boolean}
          */
         isArray: function (x) {
@@ -494,6 +494,120 @@ var CryptoMessage = require('./CryptoMessage');
         signer = signerXML = null;
 
         return signature;
+    };
+
+    /*
+     * Вычсление Hash значения данных или бинарных данных
+     *
+     * @method getHash
+     * @param {String} str строка для вычисления hash значения
+     * @param {Boolean} binary Тип подписи
+     * @returns {String} Возвращает hash строку
+     */
+    crypto.getHash = function (str, binary) {
+        var hashData, hash;
+        hashData = _private.createObject('CAdESCOM.HashedData');
+
+        // Алгоритм хэширования нужно указать до того, как будут переданы данные
+        hashData.Algorithm = constant.HashAlgorithm.CADESCOM_HASH_ALGORITHM_CP_GOST_3411;
+        if(binary !== undefined && binary === true) {
+            // Указываем кодировку данных
+            // Кодировка должна быть указана до того, как будут переданы сами данные
+            hashData.DataEncoding = constant.ContentEncoding.CADESCOM_BASE64_TO_BINARY;
+
+            str = _private.base64Encode(str);
+        }
+
+        hashData.Hash(str);
+
+        // Хэш-значение будет вычислено от данных в кодировке UCS2-LE
+        // Для алгоритма SHA-1 хэш-значение будет совпадать с вычисленным при помощи CAPICOM
+        hash = hashData.Value;
+
+        hashData = null;
+        return hash;
+    };
+
+    /*
+     * Создание ЭП по хэш значению
+     *
+     * @method SignHash
+     * @param {String} hash fingerprint сертификата для подписи
+     * @param {String} hashValue хэш подписываемых данных
+     * @returns {String} Возвращает подпись
+     */
+    crypto.SignHash = function(hash, hashValue, signType) {
+        var hashData, rawSignature, signature;
+
+        if(signType === true) {
+            var signer = _private.createObject('CAdESCOM.CPSigner');
+            rawSignature = _private.createObject('CAdESCOM.CadesSignedData');
+            signer.Certificate = this.getByHash(hash).get();
+        }
+        else{
+            rawSignature = _private.createObject('CAdESCOM.RawSignature');
+            var certificate = this.getByHash(hash).get();
+        }
+
+        hashData = _private.createObject('CAdESCOM.HashedData');
+
+        // Инициализируем объект заранее вычисленным хэш-значением
+        // Алгоритм хэширования нужно указать до того, как будет передано хэш-значение
+        hashData.Algorithm = constant.HashAlgorithm.CADESCOM_HASH_ALGORITHM_CP_GOST_3411;
+        hashData.SetHashValue(hashValue);
+
+        try {
+            if(signType === true)
+                signature = rawSignature.SignHash(hashData, signer, constant.ContentEncoding.CADESCOM_BASE64_TO_BINARY);
+            else
+                signature = rawSignature.SignHash(hashData, certificate);
+        }
+        catch(e) {
+            getError(message.cantCreateSignatureHash+' '+e);
+            return;
+        }
+
+        hashData = rawSignature = null;
+
+        return signature;
+    };
+
+    /*
+     * Верификация подписипо хэш значению
+     *
+     * @method VerifyHash
+     * @param {String} hash fingerprint сертификата для подписи
+     * @param {String} hashValue хэш подписываемых данных
+     * @param {String} signature подпись
+     * @param {Boolean} signType отсоединенная / присоединенная
+     * @returns {Boolean}
+     */
+    crypto.VerifyHash = function (hash, hashValue, signature, signType) {
+        var hashData, rawSignature, certificate;
+
+        hashData = _private.createObject('CAdESCOM.HashedData');
+        certificate = this.getByHash(hash).get();
+
+        if(signType === true)
+            rawSignature = _private.createObject('CAdESCOM.CadesSignedData');
+        else
+            rawSignature = _private.createObject('CAdESCOM.RawSignature');
+
+        hashData.Algorithm = constant.HashAlgorithm.CADESCOM_HASH_ALGORITHM_CP_GOST_3411;
+        hashData.SetHashValue(hashValue);
+
+        try {
+            if(signType === true)
+                rawSignature.VerifyHash(hashData, signature, constant.ContentEncoding.CADESCOM_BASE64_TO_BINARY);
+            else
+                rawSignature.VerifyHash(hashData, certificate, signature);
+        }
+        catch (e) {
+            getError(message.verifyHash+' '+e);
+            return;
+        }
+
+        return true;
     };
 
     /*
