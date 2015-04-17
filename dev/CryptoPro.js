@@ -27,6 +27,7 @@ var CryptoMessage = require('./CryptoMessage');
 
     _private = {
         isIE:(navigator.userAgent.match(/msie/i) || navigator.userAgent.match(/Trident\/./i)),
+        isApple: (navigator.userAgent.match(/ipod/i) || navigator.userAgent.match(/ipad/i) || navigator.userAgent.match(/iphone/i)),
 
         /*
          * Добавление object в DOM для работы с Crypto API
@@ -70,6 +71,16 @@ var CryptoMessage = require('./CryptoMessage');
          * @returns {Boolean|String} Возвращает информацию о Крипто Про CSP или false
          */
         createObject:function(name){
+            if(this.isApple) {
+                if(call_ru_cryptopro_npcades_10_native_bridge
+                    && typeof call_ru_cryptopro_npcades_10_native_bridge === 'function') {
+                        return call_ru_cryptopro_npcades_10_native_bridge("CreateObject", [name]);
+                }
+                else {
+                    getError(message.noNativeBridge);
+                }
+            }
+
             if(!this.isIE){
                 var o = document.getElementById('cadesplugin');
                 return o.CreateObject(name);
@@ -179,9 +190,9 @@ var CryptoMessage = require('./CryptoMessage');
 
         if(!_enablePlugin) return;
 
-        try {
-            store = _private.createObject('CAPICOM.store');
+        store = _private.createObject('CAPICOM.store');
 
+        try {
             store.Open(constant.StoreLocation.CAPICOM_CURRENT_USER_STORE,
                         constant.StoreNames.CAPICOM_MY_STORE,
                         constant.StoreOpenMode.CAPICOM_STORE_OPEN_MAXIMUM_ALLOWED);
@@ -198,14 +209,15 @@ var CryptoMessage = require('./CryptoMessage');
                     getError(message.noHashCertificate);
             }
 
-            store.Close();
-            store = certificates = null;
-
         }
         catch (e){
             if (e.number !== -2138568446) // отказ от выбора сертификата
                 getError("Ошибка при получении сертификата: " + e);
             this.cetificate = null;
+        }
+        finally {
+            store.Close();
+            store = certificates = null;
         }
     };
 
@@ -363,9 +375,9 @@ var CryptoMessage = require('./CryptoMessage');
 
         if(!_enablePlugin) return;
 
-        try {
-            store = _private.createObject('CAPICOM.store');
+        store = _private.createObject('CAPICOM.store');
 
+        try {
             store.Open(constant.StoreLocation.CAPICOM_CURRENT_USER_STORE,
                 constant.StoreNames.CAPICOM_MY_STORE,
                 constant.StoreOpenMode.CAPICOM_STORE_OPEN_MAXIMUM_ALLOWED);
@@ -400,14 +412,15 @@ var CryptoMessage = require('./CryptoMessage');
                     getError(message.noCertificatesStore);
                 }
             }
-
-            store.Close();
-            store = certificates = null;
         }
         catch (e){
             if (e.number !== -2138568446) // отказ от выбора сертификата
                 getError("Ошибка при получении сертификата: " + e);
             return;
+        }
+        finally {
+            store.Close();
+            store = certificates = null;
         }
 
         return list;
@@ -451,8 +464,9 @@ var CryptoMessage = require('./CryptoMessage');
             getError(message.cantCreateSignature+" " + e);
             return;
         }
-
-        signer = signedData = signedTime = null;
+        finally {
+            signer = signedData = signedTime = null;
+        }
 
         return signature;
     };
@@ -489,8 +503,9 @@ var CryptoMessage = require('./CryptoMessage');
             getError(message.cantCreateSignatureXML+" " + e);
             return;
         }
-
-        signer = signerXML = null;
+        finally {
+            signer = signerXML = null;
+        }
 
         return signature;
     };
@@ -605,6 +620,9 @@ var CryptoMessage = require('./CryptoMessage');
             getError(message.verifyHash+' '+e);
             return;
         }
+        finally {
+            hashData = certificate = rawSignature = null
+        }
 
         return true;
     };
@@ -628,9 +646,10 @@ var CryptoMessage = require('./CryptoMessage');
         catch(e) {
             getError(message.verifyPkcs7+" " + e);
             return;
+        } finally {
+            signedData = null;
         }
 
-        signedData = null;
         return true;
     };
 
@@ -651,8 +670,9 @@ var CryptoMessage = require('./CryptoMessage');
             getError(message.verifyXML+" " + e);
             return;
         }
-
-        signerXML = null;
+        finally {
+            signerXML = null;
+        }
 
         return true;
     };
