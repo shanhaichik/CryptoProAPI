@@ -1,27 +1,12 @@
 var CryptoConstant = require('./CryptoConstant');
 var CryptoMessage = require('./CryptoMessage');
 
-;(function(crypto, constant, message) {
+window.CryptoPro = (function(crypto, constant, message) {
     'use strict';
 
     if(Object.keys(crypto).length) {
-        return;
+        return crypto;
     }
-
-    function getError(err) {
-        var error =  err.message;
-
-        if (!error) {
-            error = err;
-        } else if (err.number) {
-            error += " (" + err.number + ")";
-        }
-
-        console.log(error)
-
-        //TODO: добавить событие вызова ошибки
-    }
-
     //Установлен и включен браузер плагин
     var  _enablePlugin = false, _private;
 
@@ -42,7 +27,7 @@ var CryptoMessage = require('./CryptoMessage');
                 document.body.appendChild(o);
 
             if(!this.checkPlugin()) {
-                getError(message.noPlugin);
+                throw new Error(message.noPlugin);
             }
         },
 
@@ -55,7 +40,6 @@ var CryptoMessage = require('./CryptoMessage');
         checkPlugin: function() {
             try {
                 var csp = this.createObject('CAdESCOM.About');
-                _enablePlugin = true;
                 return csp;
             }
             catch(e) {}
@@ -77,7 +61,7 @@ var CryptoMessage = require('./CryptoMessage');
                         return call_ru_cryptopro_npcades_10_native_bridge("CreateObject", [name]);
                 }
                 else {
-                    getError(message.noNativeBridge);
+                    throw new Error(message.noNativeBridge);
                 }
             }
 
@@ -171,9 +155,7 @@ var CryptoMessage = require('./CryptoMessage');
 
     };
 
-    _private.init();
-
-    /*
+     /*
      * Получение сертификата из хранища по хэшу
      *
      * @method getByHash
@@ -188,7 +170,9 @@ var CryptoMessage = require('./CryptoMessage');
 
         var store, certificates;
 
-        if(!_enablePlugin) return;
+        if(!_enablePlugin) {
+            _private.init();
+        }
 
         store = _private.createObject('CAPICOM.store');
 
@@ -199,20 +183,20 @@ var CryptoMessage = require('./CryptoMessage');
 
             certificates = store.Certificates;
             if(certificates.Count === 0) {
-                getError(message.noCertificate);
+                throw new Error(message.noCertificate);
             }
             else {
                 certificates = certificates.Find(constant.CertFindType.CAPICOM_CERTIFICATE_FIND_SHA1_HASH, hash);
                 if(certificates.Count > 0)
                     this.cetificate = certificates.Item(1);
                 else
-                    getError(message.noHashCertificate);
+                    throw new Error(message.noHashCertificate);
             }
 
         }
         catch (e){
             if (e.number !== -2138568446) // отказ от выбора сертификата
-                getError("Ошибка при получении сертификата: " + e);
+                throw new Error("Ошибка при получении сертификата: " + e);
             this.cetificate = null;
         }
         finally {
@@ -373,7 +357,9 @@ var CryptoMessage = require('./CryptoMessage');
     crypto.getList = function() {
         var store, certificates;
 
-        if(!_enablePlugin) return;
+        if(!_enablePlugin) {
+            _private.init();
+        }
 
         store = _private.createObject('CAPICOM.store');
 
@@ -384,7 +370,7 @@ var CryptoMessage = require('./CryptoMessage');
 
             certificates = store.Certificates;
               if(certificates.Count === 0) {
-                getError(message.noCertificate);
+                throw new Error(message.noCertificate)
             }
             else {
                 var certificate, list = [], i;
@@ -409,13 +395,14 @@ var CryptoMessage = require('./CryptoMessage');
                     }
                 }
                 else {
-                    getError(message.noCertificatesStore);
+                    throw new Error(message.noCertificatesStore);
+
                 }
             }
         }
         catch (e){
             if (e.number !== -2138568446) // отказ от выбора сертификата
-                getError("Ошибка при получении сертификата: " + e);
+                throw new Error("Ошибка при получении сертификата: "+ e.message);
             return;
         }
         finally {
@@ -461,8 +448,7 @@ var CryptoMessage = require('./CryptoMessage');
             var signature = signedData.SignCades(signer, constant.CadesType.CADESCOM_CADES_BES, type);
         }
         catch (e) {
-            getError(message.cantCreateSignature+" " + e);
-            return;
+            throw new Error(message.cantCreateSignature+" " + e);
         }
         finally {
             signer = signedData = signedTime = null;
@@ -500,8 +486,7 @@ var CryptoMessage = require('./CryptoMessage');
             var signature = signerXML.Sign(signer)
         }
         catch(e) {
-            getError(message.cantCreateSignatureXML+" " + e);
-            return;
+            throw new Error(message.cantCreateSignatureXML+" " + e);
         }
         finally {
             signer = signerXML = null;
@@ -548,6 +533,7 @@ var CryptoMessage = require('./CryptoMessage');
      * @method SignHash
      * @param {String} hash fingerprint сертификата для подписи
      * @param {String} hashValue хэш подписываемых данных
+     * @param {Boolean} signType отсоединенная / присоединенная
      * @returns {String} Возвращает подпись
      */
     crypto.SignHash = function(hash, hashValue, signType) {
@@ -577,8 +563,7 @@ var CryptoMessage = require('./CryptoMessage');
                 signature = rawSignature.SignHash(hashData, certificate);
         }
         catch(e) {
-            getError(message.cantCreateSignatureHash+' '+e);
-            return;
+            throw new Error(message.cantCreateSignatureHash+' '+e);
         }
 
         hashData = rawSignature = null;
@@ -617,8 +602,7 @@ var CryptoMessage = require('./CryptoMessage');
                 rawSignature.VerifyHash(hashData, certificate, signature);
         }
         catch (e) {
-            getError(message.verifyHash+' '+e);
-            return;
+            throw new Error(message.verifyHash+' '+e);
         }
         finally {
             hashData = certificate = rawSignature = null
@@ -644,8 +628,7 @@ var CryptoMessage = require('./CryptoMessage');
              signedData.VerifyCades(signature, constant.CadesType.CADESCOM_CADES_BES, type);
         }
         catch(e) {
-            getError(message.verifyPkcs7+" " + e);
-            return;
+            throw new Error(message.verifyPkcs7+" " + e);
         } finally {
             signedData = null;
         }
@@ -667,8 +650,7 @@ var CryptoMessage = require('./CryptoMessage');
             signerXML.Verify(signature)
         }
         catch(e) {
-            getError(message.verifyXML+" " + e);
-            return;
+            throw new Error(message.verifyXML+" " + e);
         }
         finally {
             signerXML = null;
@@ -677,6 +659,6 @@ var CryptoMessage = require('./CryptoMessage');
         return true;
     };
 
-    window.CryptoPro = crypto;
+    return crypto;
 
 }(window['CryptoPro'] || {}, CryptoConstant, CryptoMessage));
