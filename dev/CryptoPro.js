@@ -442,7 +442,7 @@ window.CryptoPro = (function(crypto, constant, message) {
         // Задаем тип преобразования данных
         signedData.ContentEncoding = constant.ContentEncoding.CADESCOM_BASE64_TO_BINARY;
         // Добавляем данные для подписи
-        signedData.Content = _private.base64Encode(signData);
+        signedData.Content = (signType) ? signData :_private.base64Encode(signData);
 
         try {
             var signature = signedData.SignCades(signer, constant.CadesType.CADESCOM_CADES_BES, type);
